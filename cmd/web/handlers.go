@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 // home - обработчик главной страницы "/"
@@ -14,12 +17,28 @@ func home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("Привет из snippetbox!\n"))
+	ts, err := template.ParseFiles("./ui/html/home.page.tmpl")
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err = ts.Execute(w, nil); err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
 }
 
 // showSnippet - показывает заметку по адресу "/snippet"
 func showSnippet(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Заметко о ...\n"))
+	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	if err != nil || id < 1 {
+		http.NotFound(w, r)
+		return
+	}
+
+	fmt.Fprintf(w, "Отображение заметки с ID %d ...\n", id)
 }
 
 // createSnippet - создание заметки "/snippet/create"
@@ -33,14 +52,4 @@ func createSnippet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write([]byte("Создание заметки ... \n"))
-}
-
-func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/snippet", showSnippet)
-	mux.HandleFunc("/snippet/create", createSnippet)
-
-	log.Println("Server is listening on http://127.0.0.1:4000")
-	log.Fatal(http.ListenAndServe(":4000", mux))
 }
