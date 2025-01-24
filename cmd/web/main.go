@@ -1,26 +1,30 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"path/filepath"
 )
 
 func main() {
+	addr := flag.String("addr", ":4000", "Сетевой адрес HTTP")
+	staticDir := flag.String("staticDir", "./ui/static", "Папка статических файлов")
+	flag.Parse()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", home)
 	mux.HandleFunc("/snippet", showSnippet)
 	mux.HandleFunc("/snippet/create", createSnippet)
 
 	// Создаем обработчик статических файлов, которые есть в ./ui/static
-	fileServer := http.FileServer(neuteredFileSystem{http.Dir("./static")})
+	fileServer := http.FileServer(neuteredFileSystem{http.Dir(*staticDir)})
 	// Переходя на URL /static/css/main.css мы должны убрать префикс /static чтобы
 	// было не -> ./ui/static/static/css/main.css <- А БЫЛО -> ./ui/static/css/main.css <-
 	mux.Handle("/static", http.NotFoundHandler())
 	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
 
-	log.Println("Server is listening on http://127.0.0.1:4000")
-	log.Fatal(http.ListenAndServe(":4000", mux))
+	log.Printf("Server is listening on %s", *addr)
+	log.Fatal(http.ListenAndServe(*addr, mux))
 }
 
 type neuteredFileSystem struct {
