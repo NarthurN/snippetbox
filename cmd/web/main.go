@@ -5,12 +5,19 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"os"
 )
 
 func main() {
+	// Конфиги через командную строку.
 	addr := flag.String("addr", ":4000", "Сетевой адрес HTTP")
 	staticDir := flag.String("staticDir", "./ui/static", "Папка статических файлов")
 	flag.Parse()
+
+	// Логеры
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", home)
 	mux.HandleFunc("/snippet", showSnippet)
@@ -23,8 +30,15 @@ func main() {
 	mux.Handle("/static", http.NotFoundHandler())
 	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
 
-	log.Printf("Server is listening on %s", *addr)
-	log.Fatal(http.ListenAndServe(*addr, mux))
+	// Свой настриваемый сервер.
+	srv := &http.Server{
+		Addr: *addr,
+		ErrorLog: errorLog,
+		Handler: mux,
+	}
+
+	infoLog.Printf("Server is listening on %s", *addr)
+	errorLog.Fatal(srv.ListenAndServe())
 }
 
 type neuteredFileSystem struct {
