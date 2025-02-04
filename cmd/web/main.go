@@ -1,11 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 type application struct {
@@ -14,11 +18,6 @@ type application struct {
 }
 
 func main() {
-	// Конфиги через командную строку.
-	addr := flag.String("addr", ":4000", "Сетевой адрес HTTP")
-	staticDir := flag.String("staticDir", "./ui/static", "Папка статических файлов")
-	flag.Parse()
-
 	// Логеры
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
@@ -27,6 +26,25 @@ func main() {
 		errorLog: errorLog,
 		infoLog:  infoLog,
 	}
+	// Загружаем переменные из .env
+	err := godotenv.Load()
+	if err != nil {
+		app.errorLog.Fatal("Ошибка загрузки .env файла")
+	}
+	dbPassword := os.Getenv("DB_PASSWORD")
+
+	// Конфиги через командную строку.
+	addr := flag.String("addr", ":4000", "Сетевой адрес HTTP")
+	staticDir := flag.String("staticDir", "./ui/static", "Папка статических файлов")
+	dsn := flag.String("dsn", "web:"+dbPassword+"@/snippetbox?parseTime=true", "Название MySQL источника данных")
+	flag.Parse()
+
+	db, err := openDB(*dsn)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
+	defer db.Close()
 
 	// Свой настриваемый сервер.
 	srv := &http.Server{
@@ -64,4 +82,15 @@ func (nfs neuteredFileSystem) Open(path string) (http.File, error) {
 		}
 	}
 	return f, nil
+}
+
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	if err = db.Ping(); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
