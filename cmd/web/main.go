@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/NarthurN/snippetbox/pkg/models/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 )
@@ -15,21 +16,15 @@ import (
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
+	snippets *mysql.SnippetModel
 }
 
 func main() {
-	// Логеры
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	app := &application{
-		errorLog: errorLog,
-		infoLog:  infoLog,
-	}
 	// Загружаем переменные из .env
 	err := godotenv.Load()
 	if err != nil {
-		app.errorLog.Fatal("Ошибка загрузки .env файла")
+		log.Fatal("Ошибка загрузки .env файла")
 	}
 	dbPassword := os.Getenv("DB_PASSWORD")
 
@@ -39,12 +34,22 @@ func main() {
 	dsn := flag.String("dsn", "web:"+dbPassword+"@/snippetbox?parseTime=true", "Название MySQL источника данных")
 	flag.Parse()
 
+	// Логеры
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
 	db, err := openDB(*dsn)
 	if err != nil {
 		errorLog.Fatal(err)
 	}
 
 	defer db.Close()
+
+	app := &application{
+		errorLog: errorLog,
+		infoLog:  infoLog,
+		snippets: &mysql.SnippetModel{DB: db},
+	}
 
 	// Свой настриваемый сервер.
 	srv := &http.Server{
