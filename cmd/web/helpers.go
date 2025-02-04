@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 )
 
-
 // serverError записывает сообщение об ошибке в errorLog и затем
 // отправляет пользователю ответ 500 "Внутренняя ошибка сервера"
 func (app *application) serverError(w http.ResponseWriter, err error) {
