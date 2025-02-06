@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"html/template"
+	// "html/template"
 	"net/http"
 	"strconv"
 
@@ -18,22 +18,30 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		app.notFound(w)
 		return
 	}
+    s, err := app.snippets.Latest()
+    if err != nil {
+        app.serverError(w, err)
+        return
+    }
+ 
+    for _, snippet := range s {
+        fmt.Fprintf(w, "%v\n", snippet)
+    }
+	// files := []string{
+	// 	"./ui/html/home.page.tmpl",
+	// 	"./ui/html/base.layout.tmpl",
+	// 	"./ui/html/footer.partial.tmpl",
+	// }
 
-	files := []string{
-		"./ui/html/home.page.tmpl",
-		"./ui/html/base.layout.tmpl",
-		"./ui/html/footer.partial.tmpl",
-	}
+	// ts, err := template.ParseFiles(files...)
+	// if err != nil {
+	// 	app.serverError(w, err)
+	// 	return
+	// }
 
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-
-	if err = ts.Execute(w, nil); err != nil {
-		app.serverError(w, err)
-	}
+	// if err = ts.Execute(w, nil); err != nil {
+	// 	app.serverError(w, err)
+	// }
 }
 
 // showSnippet - показывает заметку по адресу "/snippet"
