@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"text/template"
+
 	// "html/template"
 	"net/http"
 	"strconv"
@@ -46,23 +48,41 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 // showSnippet - показывает заметку по адресу "/snippet"
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
-	if err != nil || id < 1 {
-		app.notFound(w)
-		return
-	}
-
-	s, err := app.snippets.Get(id)
-	if err != nil {
-		if errors.Is(err, models.ErrNoRecord) {
-			app.notFound(w)
-		} else {
-			app.serverError(w, err)
-		}
-		return
-	}
-
-	fmt.Fprintf(w, "%v", s)
+    id, err := strconv.Atoi(r.URL.Query().Get("id"))
+    if err != nil || id < 1 {
+        app.notFound(w)
+        return
+    }
+ 
+    s, err := app.snippets.Get(id)
+    if err != nil {
+        if errors.Is(err, models.ErrNoRecord) {
+            app.notFound(w)
+        } else {
+            app.serverError(w, err)
+        }
+        return
+    }
+ 
+    // Инициализируем срез, содержащий путь к файлу show.page.tmpl
+    // Добавив еще базовый шаблон и часть футера, который мы сделали ранее.
+    files := []string{
+        "./ui/html/show.page.tmpl",
+        "./ui/html/base.layout.tmpl",
+        "./ui/html/footer.partial.tmpl",
+    }
+ 
+    // Парсинг файлов шаблонов...
+    ts, err := template.ParseFiles(files...)
+    if err != nil {
+        app.serverError(w, err)
+        return
+    }
+ 
+    err = ts.Execute(w, s)
+    if err != nil {
+        app.serverError(w, err)
+    }
 }
 
 // createSnippet - создание заметки "/snippet/create"
